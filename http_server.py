@@ -16,20 +16,40 @@ def response_ok(body=b"This is a minimal response", mimetype=b"text/plain"):
         <html><h1>Welcome:</h1></html>\r\n
         '''
     """
-    pass
 
+    return b"\r\n".join([
+                b"HTTP/1.1 200 OK",
+                b"Content-Type: " + mimetype,
+                b"",
+                body,
+            ])
 
 def parse_request(request):
-    pass
+    
+    method, uri, version = request.split("\r\n")[0].split(" ")
+
+    if method != "GET":
+        raise NotImplementedError
+
+    return uri
 
 
 def response_method_not_allowed():
     """Returns a 405 Method Not Allowed response"""
-    pass
+    return b"\r\n".join([
+                b"HTTP/1.1 405 Method Not Allowed",
+                b"",
+                b"You can't do that on this server!",
+            ])
 
 
 def response_not_found():
     """Returns a 404 Not Found response"""
+
+    # TODO: Construct and return a 404 "not found" response
+    # You can re-use most of the code from the 405 Method Not
+    # Allowed response.
+
     pass
     
 
@@ -43,8 +63,8 @@ def resolve_uri(uri):
     If the URI is a file, it should return the contents of that file
     and its correct mimetype.
 
-    If the URI does not map to a real location, it should raise an
-    exception that the server can catch to return a 404 response.
+    If the URI does not map to a real location, it should raise a
+    NameError that the server can catch to return a 404 response.
 
     Ex:
         resolve_uri('/a_web_page.html') -> (b"<html><h1>North Carolina...",
@@ -61,12 +81,13 @@ def resolve_uri(uri):
 
     """
 
-    # TODO: Raise a NameError if the requested content is not present
-    # under webroot.
+    # TODO: Fill content and mime_type according to the function description
+    # above. If the provided URI does not correspdond to a real file or
+    # directory, then raise a NameError.
 
-    # TODO: Fill in the appropriate content and mime_type give the URI.
-    # See the assignment guidelines for help on "mapping mime-types", though
-    # you might need to create a special case for handling make_time.py
+    # Hint: When opening a file, use open(filename, "rb") to open and read the
+    # file as a stream of bytes.
+
     content = b"not implemented"
     mime_type = b"not implemented"
 
@@ -87,16 +108,26 @@ def server(log_buffer=sys.stderr):
             conn, addr = sock.accept()  # blocking
             try:
                 print('connection - {0}:{1}'.format(*addr), file=log_buffer)
+                request = ''
                 while True:
-                    data = conn.recv(16)
-                    print('received "{0}"'.format(data), file=log_buffer)
-                    if data:
-                        print('sending data back to client', file=log_buffer)
-                        conn.sendall(data)
-                    else:
-                        msg = 'no more data from {0}:{1}'.format(*addr)
-                        print(msg, log_buffer)
+                    data = conn.recv(1024)
+                    request += data.decode('utf8')
+                    if len(data) < 1024:
                         break
+
+                try:
+                    uri = parse_request(request)
+                except NotImplementedError:
+                    response = response_method_not_allowed()
+                else:
+                    # TODO: resolve_uri will raise a NameError if the file
+                    # specified by uri can't be found. If it does raise a
+                    # NameError, then let response get response_not_found()
+                    # instead of response_ok()
+                    body, mimetype = resolve_uri(uri)
+                    response = response_ok(body=body, mimetype=mimetype)
+
+                conn.sendall(response)
             finally:
                 conn.close()
 
