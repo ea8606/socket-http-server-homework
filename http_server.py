@@ -113,7 +113,8 @@ def server(log_buffer=sys.stderr):
                 while True:
                     data = conn.recv(1024)
                     request += data.decode('utf8')
-                    if len(data) < 1024:
+
+                    if '\r\n\r\n' in data:
                         break
 
                 try:
