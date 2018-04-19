@@ -1,5 +1,6 @@
 import socket
 import sys
+import os
 
 def response_ok(body=b"This is a minimal response", mimetype=b"text/plain"):
     """
@@ -95,7 +96,7 @@ def resolve_uri(uri):
 
 
 def server(log_buffer=sys.stderr):
-    address = ('127.0.0.1', 10000)
+    address = ('127.0.0.1', os.environ.get('PORT', 10000))
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     print("making a server on {0}:{1}".format(*address), file=log_buffer)
