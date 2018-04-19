@@ -114,7 +114,7 @@ def server(log_buffer=sys.stderr):
                     data = conn.recv(1024)
                     request += data.decode('utf8')
 
-                    if '\r\n\r\n' in data:
+                    if b'\r\n\r\n' in data:
                         break
 
                 try:
