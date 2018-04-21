@@ -1,6 +1,9 @@
 import socket
 import sys
 import os
+from urllib.parse import urlparse
+import mimetypes
+
 
 def response_ok(body=b"This is a minimal response", mimetype=b"text/plain"):
     """
@@ -19,14 +22,15 @@ def response_ok(body=b"This is a minimal response", mimetype=b"text/plain"):
     """
 
     return b"\r\n".join([
-                b"HTTP/1.1 200 OK",
-                b"Content-Type: " + mimetype,
-                b"",
-                body,
-            ])
+        b"HTTP/1.1 200 OK",
+        b"Content-Type: " + mimetype,
+        b"",
+        body,
+    ])
+
 
 def parse_request(request):
-    
+
     method, uri, version = request.split("\r\n")[0].split(" ")
 
     if method != "GET":
@@ -38,10 +42,10 @@ def parse_request(request):
 def response_method_not_allowed():
     """Returns a 405 Method Not Allowed response"""
     return b"\r\n".join([
-                b"HTTP/1.1 405 Method Not Allowed",
-                b"",
-                b"You can't do that on this server!",
-            ])
+        b"HTTP/1.1 405 Method Not Allowed",
+        b"",
+        b"You can't do that on this server!",
+    ])
 
 
 def response_not_found():
@@ -52,7 +56,7 @@ def response_not_found():
     # Allowed response.
 
     pass
-    
+
 
 def resolve_uri(uri):
     """
@@ -82,16 +86,33 @@ def resolve_uri(uri):
 
     """
 
-    # TODO: Fill content and mime_type according to the function description
-    # above. If the provided URI does not correspdond to a real file or
-    # directory, then raise a NameError.
+    url_parse_result = urlparse(uri)
+    path1 = url_parse_result.path.split('/')
+    file_name = '/'.join(path1[1:])
 
-    # Hint: When opening a file, use open(filename, "rb") to open and read the
-    # file as a stream of bytes.
+    # If the requested URI is a directory, then the content should be a
+    # plain-text listing of the contents with mimetype `text/plain`.
 
-    content = b"not implemented"
-    mime_type = b"not implemented"
+    if os.path.isdir(file_name):
+        content = '/\r\n'.join(os.listdir(file_name)).encode('utf8')
+        mime_type = 'text/plain'
+        return content, mime_type
+    else:
 
+        # If the URI is a file, it should return the contents of that file
+        # and its correct mimetype.
+
+        try:
+            with open(file_name, 'rb') as fd:
+                content = fd.readlines()
+        except FileNotFoundError:
+
+            # If the URI does not map to a real location, it should raise a
+            # NameError that the server can catch to return a 404 response.
+
+            raise NameError
+
+    mime_type = mimetypes.guess_type(file_name)
     return content, mime_type
 
 
@@ -141,5 +162,3 @@ def server(log_buffer=sys.stderr):
 if __name__ == '__main__':
     server()
     sys.exit(0)
-
-
