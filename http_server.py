@@ -87,33 +87,44 @@ def resolve_uri(uri):
     """
 
     url_parse_result = urlparse(uri)
-    path1 = url_parse_result.path.split('/')
-    file_name = '/'.join(path1[1:])
-
-    # If the requested URI is a directory, then the content should be a
-    # plain-text listing of the contents with mimetype `text/plain`.
-
-    if os.path.isdir(file_name):
-        content = '/\r\n'.join(os.listdir(file_name)).encode('utf8')
+    webroot = 'webroot'
+    # if uri is the root, list webroot contents and append a '/'
+    # to any directories
+    if url_parse_result.path == '/':
+        file_name = webroot
+        listing = os.listdir(file_name)
+        content_tmp = []
+        for name in listing:
+            if os.path.isdir('webroot/' + name):
+                name += '/'
+            content_tmp.append(name)
         mime_type = 'text/plain'
-        return content, mime_type
+        content = ', '.join(content_tmp)
+        return content.encode('utf8'), mime_type.encode('utf8')
     else:
-
-        # If the URI is a file, it should return the contents of that file
-        # and its correct mimetype.
-
-        try:
-            with open(file_name, 'rb') as fd:
-                content = fd.readlines()
-        except FileNotFoundError:
-
-            # If the URI does not map to a real location, it should raise a
-            # NameError that the server can catch to return a 404 response.
-
-            raise NameError
-
-    mime_type = mimetypes.guess_type(file_name)
-    return content, mime_type
+        # if requested file is a directory, list the contents
+        # and append a '/' to the file name
+        file_name = url_parse_result.path.split('/')[1]
+        path_to_file_name = webroot + '/' + file_name
+        if os.path.isdir(path_to_file_name):
+            listing = os.listdir(path_to_file_name)
+            content_tmp = []
+            for name in listing:
+                if os.path.isdir(path_to_file_name + '/' + name):
+                    name += '/'
+                content_tmp.append(name)
+            mime_type = 'text/plain'
+            content = ', '.join(content_tmp)
+            return content.encode('utf8'), mime_type.encode('utf8')
+        else:
+            # at this point the code should be seeing a non-directory file
+            try:
+                with open(path_to_file_name, 'rb') as fd:
+                    content = fd.readlines()
+            except FileNotFoundError:
+                raise NameError
+            mime_type = mimetypes.guess_type(path_to_file_name)
+            return content, mime_type
 
 
 def server(log_buffer=sys.stderr):
