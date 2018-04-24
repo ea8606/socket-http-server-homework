@@ -51,11 +51,11 @@ def response_method_not_allowed():
 def response_not_found():
     """Returns a 404 Not Found response"""
 
-    # TODO: Construct and return a 404 "not found" response
-    # You can re-use most of the code from the 405 Method Not
-    # Allowed response.
-
-    pass
+    return b"\r\n".join([
+        b"HTTP/1.1 404 Not Found",
+        b"",
+        b"The server can not find the requested URL",
+    ])
 
 
 def resolve_uri(uri):
@@ -106,6 +106,7 @@ def resolve_uri(uri):
         # and append a '/' to the file name
         file_name = url_parse_result.path.split('/')[1]
         path_to_file_name = webroot + '/' + file_name
+        # print("path_to_file_name =", path_to_file_name)
         if os.path.isdir(path_to_file_name):
             listing = os.listdir(path_to_file_name)
             content_tmp = []
@@ -119,11 +120,16 @@ def resolve_uri(uri):
         else:
             # at this point the code should be seeing a non-directory file
             try:
+                # print("path_to_file_name = ", path_to_file_name)
                 with open(path_to_file_name, 'rb') as fd:
-                    content = fd.readlines()
+                    content_tmp = fd.readlines()
+                    # print("content_tmp = ", content_tmp)
             except FileNotFoundError:
                 raise NameError
+                # print("content_tmp")
             mime_type = mimetypes.guess_type(path_to_file_name)
+            content = ''.join(content.tmp)
+            # print("content = ", content, file=sys.stderr)
             return content, mime_type
 
 
@@ -148,18 +154,22 @@ def server(log_buffer=sys.stderr):
 
                     if b'\r\n\r\n' in data:
                         break
-
                 try:
                     uri = parse_request(request)
+                    # print("uri is = ", uri, file=sys.stderr)
                 except NotImplementedError:
                     response = response_method_not_allowed()
-                else:
-                    # TODO: resolve_uri will raise a NameError if the file
-                    # specified by uri can't be found. If it does raise a
-                    # NameError, then let response get response_not_found()
-                    # instead of response_ok()
+                # else:
+                try:
                     body, mimetype = resolve_uri(uri)
-                    response = response_ok(body=body, mimetype=mimetype)
+                    # print("body ", body, file=sys.stderr)
+                except NameError:
+                    response = response_not_found()
+                    # else:
+                response = response_ok(body=body, mimetype=mimetype)
+                    # print("response = ", response)
+                    # except NameError:
+                    #     response = response_not_found()
 
                 conn.sendall(response)
             finally:
