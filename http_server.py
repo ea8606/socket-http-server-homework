@@ -86,51 +86,41 @@ def resolve_uri(uri):
 
     """
 
-    url_parse_result = urlparse(uri)
     webroot = 'webroot'
-    # if uri is the root, list webroot contents and append a '/'
-    # to any directories
-    if url_parse_result.path == '/':
-        file_name = webroot
-        listing = os.listdir(file_name)
-        content_tmp = []
+    resource_requested = urlparse(uri).path
+    file_path = webroot + resource_requested
+
+    # if file requested is a directory list the files in the directory
+    # and append a '/' to any files listed that are directories
+    if os.path.isdir(file_path):
+        listing = os.listdir(file_path)
+        content = []
         for name in listing:
-            if os.path.isdir('webroot/' + name):
+            if os.path.isdir(webroot + '/' + name):
                 name += '/'
-            content_tmp.append(name)
+            content.append(name)
+        content1 = ', '.join(content)
         mime_type = 'text/plain'
-        content = ', '.join(content_tmp)
-        return content.encode('utf8'), mime_type.encode('utf8')
-    else:
-        # if requested file is a directory, list the contents
-        # and append a '/' to the file name
-        file_name = url_parse_result.path.split('/')[1]
-        path_to_file_name = webroot + '/' + file_name
-        # print("path_to_file_name =", path_to_file_name)
-        if os.path.isdir(path_to_file_name):
-            listing = os.listdir(path_to_file_name)
-            content_tmp = []
-            for name in listing:
-                if os.path.isdir(path_to_file_name + '/' + name):
-                    name += '/'
-                content_tmp.append(name)
-            mime_type = 'text/plain'
-            content = ', '.join(content_tmp)
-            return content.encode('utf8'), mime_type.encode('utf8')
+        return content1.encode('utf8'), mime_type.encode('utf8')
+
+    # if file requested is a file list the contents of the file
+    if os.path.isfile(file_path):
+        if "text" not in mimetypes.guess_type(file_path)[0]:
+            # print('file_path = ', file_path)
+            with open(file_path, 'rb') as fd:
+                content = fd.readlines()
+            mime_type = mimetypes.guess_type(file_path)[0]
+            return str(content).encode('utf8'), mime_type.encode('utf8')
         else:
-            # at this point the code should be seeing a non-directory file
-            try:
-                # print("path_to_file_name = ", path_to_file_name)
-                with open(path_to_file_name, 'rb') as fd:
-                    content_tmp = fd.readlines()
-                    # print("content_tmp = ", content_tmp)
-            except FileNotFoundError:
-                raise NameError
-                # print("content_tmp")
-            mime_type = mimetypes.guess_type(path_to_file_name)
-            content = ''.join(content.tmp)
-            # print("content = ", content, file=sys.stderr)
-            return content, mime_type
+            with open(file_path, 'r') as fd:
+                content = fd.readlines()
+            # print("content = ", content)
+            content1 = ' '.join(content)
+            mime_type = mimetypes.guess_type(file_path)[0]
+            return content1.encode('utf8'), mime_type.encode('utf8')
+    # If file can not be found
+    else:
+        raise NameError
 
 
 def server(log_buffer=sys.stderr):
@@ -159,14 +149,14 @@ def server(log_buffer=sys.stderr):
                     # print("uri is = ", uri, file=sys.stderr)
                 except NotImplementedError:
                     response = response_method_not_allowed()
-                # else:
-                try:
-                    body, mimetype = resolve_uri(uri)
+                else:
+                    try:
+                        body, mimetype = resolve_uri(uri)
                     # print("body ", body, file=sys.stderr)
-                except NameError:
-                    response = response_not_found()
-                    # else:
-                response = response_ok(body=body, mimetype=mimetype)
+                    except NameError:
+                        response = response_not_found()
+                    else:
+                        response = response_ok(body=body, mimetype=mimetype)
                     # print("response = ", response)
                     # except NameError:
                     #     response = response_not_found()
